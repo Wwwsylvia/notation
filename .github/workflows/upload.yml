@@ -1,35 +1,40 @@
-name: Build and upload notation binaries
+name: upload
 
 on:
   push:
     branches: [ test_action ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
+  strategy:
+    matrix:
+      go-version: [1.17]
+    fail-fast: true
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Go
+    - name: Set up Go ${{ matrix.go-version }}
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: ${{ matrix.go-version }}
 
-    - name: Build
-      run: go build -v ./...
+    - name: Checkout
+      uses: actions/checkout@v2
 
     - name: Test
       run: go test -v ./...
-      
-    - name: Make
-      run: make build
+
+    - name: Build with goreleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: build --rm-dist --snapshot --skip-post-hooks
       
     - name: Upload
       uses: actions/upload-artifact@v2.3.1
       with:
-        name: notation binaries
-        path: bin/
+        name: notation_binaries
+        path: dist/
 
 
   
