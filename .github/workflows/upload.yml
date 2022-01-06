@@ -1,4 +1,4 @@
-name: upload
+name: feature_branch_upload
 
 on:
   push:
@@ -6,11 +6,12 @@ on:
 
 jobs:
   build:
+    name: Upload notation binaries
     runs-on: ubuntu-latest
-  strategy:
-    matrix:
-      go-version: [1.17]
-    fail-fast: true
+    strategy:
+      matrix:
+        go-version: [1.17]
+      fail-fast: true
     steps:
     - name: Set up Go ${{ matrix.go-version }}
       uses: actions/setup-go@v2
