@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: Upload notation binaries
+    name: Upload Notation Binaries
     runs-on: ubuntu-latest
     strategy:
       matrix:
