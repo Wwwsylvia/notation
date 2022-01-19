@@ -21,6 +21,17 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Get short hash
+      run: echo "SHORT_HASH=$(git rev-parse --short=7 ${{ github.sha }})" >> $GITHUB_ENV
+
+    - name: Get date
+      run: echo "DATE=$(date "+%Y%m%d")" >> $GITHUB_ENV
+
+    - name: Get upload url
+      run: |
+         upload_url=$(curl -sL https://api.github.com/repos/Wwwsylvia/notation/releases/tags/${{ github.ref_name }} | jq -r '.upload_url')
+         echo "UPLOAD_URL=$upload_url" >> $GITHUB_ENV
+
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2
       with:
@@ -36,8 +47,8 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: "https://uploads.github.com/repos/Wwwsylvia/notation/releases/57420443/assets{?name,label}"
-        asset_name: notation_${{ github.ref_name }}_${{ github.sha }}.zip
+        upload_url: ${{ env.UPLOAD_URL }}
+        asset_name: notation-${{ github.ref_name }}-${{ env.DATE }}-${{ env.SHORT_HASH }}.zip
         asset_path: notation.zip
         asset_content_type: application/zip
 
