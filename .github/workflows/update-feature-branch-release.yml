@@ -1,0 +1,45 @@
+name: update-feature-branch-release
+
+on:
+  push:
+    branches: [ feat-kv-extensibility ]
+
+jobs:
+  build:
+    name: Update Feature Branch Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [1.17]
+      fail-fast: true
+    steps:
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --rm-dist --snapshot
+
+    - name: Zip
+      run: zip -j notation.zip dist/notation*.*
+
+    - name: Update release
+      uses: actions/upload-release-asset@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: "https://uploads.github.com/repos/Wwwsylvia/notation/releases/57420443/assets{?name,label}"
+        asset_name: notation_${{ github.ref_name }}_${{ github.sha::7 }}.zip
+        asset_path: notation.zip
+        asset_content_type: application/zip
+
+
+
