@@ -9,12 +9,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/notaryproject/notation/internal/auth"
 	"github.com/notaryproject/notation/internal/cmd"
-	"github.com/notaryproject/notation/pkg/auth"
+	credentials "github.com/oras-project/oras-credentials-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	orasauth "oras.land/oras-go/v2/registry/remote/auth"
 )
+
+const urlConfigureCredentialsStore = "https://notaryproject.dev/docs/how-to/registry-authentication/#configure-docker-credential-store-for-linux"
 
 type loginOpts struct {
 	cmd.LoggingFlagOpts
@@ -83,35 +86,31 @@ func runLogin(ctx context.Context, opts *loginOpts) error {
 			return err
 		}
 	}
-
-	if err := validateAuthConfig(ctx, opts, serverAddress); err != nil {
-		return err
-	}
-
-	nativeStore, err := auth.GetCredentialsStore(ctx, serverAddress)
-	if err != nil {
-		return fmt.Errorf("could not get the credentials store: %v", err)
-	}
-
-	// init creds
-	creds := newCredentialFromInput(
+	cred := newCredentialFromInput(
 		opts.Username,
 		opts.Password,
 	)
-	if err = nativeStore.Store(serverAddress, creds); err != nil {
-		return fmt.Errorf("failed to store credentials: %v", err)
+
+	registry, err := getRegistryClient(ctx, &opts.SecureFlagOpts, serverAddress)
+	if err != nil {
+		return fmt.Errorf("failed to get registry client: %v", err)
+	}
+	registryName := registry.Reference.Registry
+	credsStore, err := auth.NewCredentialsStore()
+	if err != nil {
+		return fmt.Errorf("failed to get credentials store: %v", err)
+	}
+	if err := credentials.Login(ctx, credsStore, registry, cred); err != nil {
+		if errors.Is(err, credentials.ErrPlaintextPutDisabled) {
+			// this error indicates that native store is not available
+			return fmt.Errorf("failed to save the credential for %s: credentials store config was not set up, please refer to %s for more information",
+				registryName, urlConfigureCredentialsStore)
+		}
+		return fmt.Errorf("failed to login to %s: %v", registryName, err)
 	}
 
 	fmt.Println("Login Succeeded")
 	return nil
-}
-
-func validateAuthConfig(ctx context.Context, opts *loginOpts, serverAddress string) error {
-	registry, err := getRegistryClient(ctx, &opts.SecureFlagOpts, serverAddress)
-	if err != nil {
-		return err
-	}
-	return registry.Ping(ctx)
 }
 
 func newCredentialFromInput(username, password string) orasauth.Credential {

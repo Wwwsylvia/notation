@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 
 	"github.com/notaryproject/notation-go/log"
 	notationregistry "github.com/notaryproject/notation-go/registry"
 	notationerrors "github.com/notaryproject/notation/cmd/notation/internal/errors"
+	notationauth "github.com/notaryproject/notation/internal/auth"
 	"github.com/notaryproject/notation/internal/trace"
 	"github.com/notaryproject/notation/internal/version"
-	loginauth "github.com/notaryproject/notation/pkg/auth"
 	"github.com/notaryproject/notation/pkg/configutil"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -161,7 +162,6 @@ func setHttpDebugLog(ctx context.Context, authClient *auth.Client) {
 
 func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Reference) (*auth.Client, bool, error) {
 	var plainHTTP bool
-
 	if opts.PlainHTTP {
 		plainHTTP = opts.PlainHTTP
 	} else {
@@ -172,51 +172,39 @@ func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Refer
 			}
 		}
 	}
-	cred := auth.Credential{
-		Username: opts.Username,
-		Password: opts.Password,
+
+	credsStore, err := notationauth.NewCredentialsStore()
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get credentials store: %w", err)
 	}
-	if cred.Username == "" {
+	var cred auth.Credential
+	if opts.Username == "" && opts.Password == "" {
+		// use existing credential
+		var err error
+		cred, err = credsStore.Get(ctx, ref.Registry)
+		if err != nil {
+			return nil, false, err
+		}
+	} else if opts.Username == "" {
 		cred = auth.Credential{
 			RefreshToken: cred.Password,
 		}
-	}
-	if cred == auth.EmptyCredential {
-		var err error
-		cred, err = getSavedCreds(ctx, ref.Registry)
-		// local registry may not need credentials
-		if err != nil && !errors.Is(err, loginauth.ErrCredentialsConfigNotSet) {
-			return nil, false, err
+	} else {
+		cred = auth.Credential{
+			Username: opts.Username,
+			Password: opts.Password,
 		}
 	}
 
+	// build authClient
 	authClient := &auth.Client{
-		Credential: func(ctx context.Context, registry string) (auth.Credential, error) {
-			switch registry {
-			case ref.Host():
-				return cred, nil
-			default:
-				return auth.EmptyCredential, nil
-			}
-		},
-		Cache:    auth.NewCache(),
-		ClientID: "notation",
+		Credential: auth.StaticCredential(ref.Host(), cred),
+		Cache:      auth.NewCache(),
+		ClientID:   "notation",
 	}
 	authClient.SetUserAgent("notation/" + version.GetVersion())
-
-	// update authClient
 	setHttpDebugLog(ctx, authClient)
-
 	return authClient, plainHTTP, nil
-}
-
-func getSavedCreds(ctx context.Context, serverAddress string) (auth.Credential, error) {
-	nativeStore, err := loginauth.GetCredentialsStore(ctx, serverAddress)
-	if err != nil {
-		return auth.EmptyCredential, err
-	}
-
-	return nativeStore.Get(serverAddress)
 }
 
 func pingReferrersAPI(ctx context.Context, remoteRepo *remote.Repository) error {
