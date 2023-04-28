@@ -183,10 +183,10 @@ func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Refer
 
 	cred := opts.Credential()
 	if cred != auth.EmptyCredential {
-		// use specified credential
+		// use the specified credential
 		authClient.Credential = auth.StaticCredential(ref.Host(), cred)
 	} else {
-		// use saved credential
+		// use saved credentials
 		credsStore, err := notationauth.NewCredentialsStore()
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to get credentials store: %w", err)
