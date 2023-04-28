@@ -94,8 +94,8 @@ func runLogin(ctx context.Context, opts *loginOpts) error {
 	if err != nil {
 		return fmt.Errorf("failed to get registry client: %v", err)
 	}
-	registryName := registry.Reference.Registry
 	if err := credentials.Login(ctx, credsStore, registry, cred); err != nil {
+		registryName := registry.Reference.Registry
 		if errors.Is(err, credentials.ErrPlaintextPutDisabled) {
 			// this error indicates that native store is not available
 			return fmt.Errorf("failed to save the credential for %s: credentials store config was not set up, please refer to %s for more information",
