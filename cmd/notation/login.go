@@ -14,10 +14,9 @@ import (
 	credentials "github.com/oras-project/oras-credentials-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-	orasauth "oras.land/oras-go/v2/registry/remote/auth"
 )
 
-const urlConfigureCredentialsStore = "https://notaryproject.dev/docs/how-to/registry-authentication/#configure-docker-credential-store-for-linux"
+const urlDocConfigureCredentialsStore = "https://notaryproject.dev/docs/how-to/registry-authentication/#configure-docker-credential-store-for-linux"
 
 type loginOpts struct {
 	cmd.LoggingFlagOpts
@@ -79,49 +78,34 @@ func runLogin(ctx context.Context, opts *loginOpts) error {
 			return err
 		}
 	}
-
 	if opts.Password == "" {
 		opts.Password, err = readPasswordFromPrompt(reader)
 		if err != nil {
 			return err
 		}
 	}
-	cred := newCredentialFromInput(
-		opts.Username,
-		opts.Password,
-	)
+	cred := opts.Credential()
 
+	credsStore, err := auth.NewCredentialsStore()
+	if err != nil {
+		return fmt.Errorf("failed to get credentials store: %v", err)
+	}
 	registry, err := getRegistryClient(ctx, &opts.SecureFlagOpts, serverAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get registry client: %v", err)
 	}
 	registryName := registry.Reference.Registry
-	credsStore, err := auth.NewCredentialsStore()
-	if err != nil {
-		return fmt.Errorf("failed to get credentials store: %v", err)
-	}
 	if err := credentials.Login(ctx, credsStore, registry, cred); err != nil {
 		if errors.Is(err, credentials.ErrPlaintextPutDisabled) {
 			// this error indicates that native store is not available
 			return fmt.Errorf("failed to save the credential for %s: credentials store config was not set up, please refer to %s for more information",
-				registryName, urlConfigureCredentialsStore)
+				registryName, urlDocConfigureCredentialsStore)
 		}
 		return fmt.Errorf("failed to login to %s: %v", registryName, err)
 	}
 
 	fmt.Println("Login Succeeded")
 	return nil
-}
-
-func newCredentialFromInput(username, password string) orasauth.Credential {
-	c := orasauth.Credential{
-		Username: username,
-		Password: password,
-	}
-	if c.Username == "" {
-		c.RefreshToken = password
-	}
-	return c
 }
 
 func readPassword(opts *loginOpts) error {

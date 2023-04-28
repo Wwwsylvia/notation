@@ -15,6 +15,7 @@ import (
 	"github.com/notaryproject/notation/internal/version"
 	"github.com/notaryproject/notation/pkg/configutil"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	credentials "github.com/oras-project/oras-credentials-go"
 	"github.com/sirupsen/logrus"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -160,8 +161,7 @@ func setHttpDebugLog(ctx context.Context, authClient *auth.Client) {
 	authClient.Client.Transport = trace.NewTransport(authClient.Client.Transport)
 }
 
-func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Reference) (*auth.Client, bool, error) {
-	var plainHTTP bool
+func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Reference) (authClient *auth.Client, plainHTTP bool, err error) {
 	if opts.PlainHTTP {
 		plainHTTP = opts.PlainHTTP
 	} else {
@@ -173,38 +173,27 @@ func getAuthClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Refer
 		}
 	}
 
-	credsStore, err := notationauth.NewCredentialsStore()
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to get credentials store: %w", err)
-	}
-	var cred auth.Credential
-	if opts.Username == "" && opts.Password == "" {
-		// use existing credential
-		var err error
-		cred, err = credsStore.Get(ctx, ref.Registry)
-		if err != nil {
-			return nil, false, err
-		}
-	} else if opts.Username == "" {
-		cred = auth.Credential{
-			RefreshToken: cred.Password,
-		}
-	} else {
-		cred = auth.Credential{
-			Username: opts.Username,
-			Password: opts.Password,
-		}
-	}
-
 	// build authClient
-	authClient := &auth.Client{
-		Credential: auth.StaticCredential(ref.Host(), cred),
-		Cache:      auth.NewCache(),
-		ClientID:   "notation",
+	authClient = &auth.Client{
+		Cache:    auth.NewCache(),
+		ClientID: "notation",
 	}
 	authClient.SetUserAgent("notation/" + version.GetVersion())
 	setHttpDebugLog(ctx, authClient)
-	return authClient, plainHTTP, nil
+
+	cred := opts.Credential()
+	if cred != auth.EmptyCredential {
+		// use specified credential
+		authClient.Credential = auth.StaticCredential(ref.Host(), cred)
+	} else {
+		// use saved credential
+		credsStore, err := notationauth.NewCredentialsStore()
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to get credentials store: %w", err)
+		}
+		authClient.Credential = credentials.Credential(credsStore)
+	}
+	return
 }
 
 func pingReferrersAPI(ctx context.Context, remoteRepo *remote.Repository) error {
