@@ -9,10 +9,9 @@ import (
 	"os"
 	"strings"
 
-	credentials "github.com/oras-project/oras-credentials-go"
-
-	notationauth "github.com/notaryproject/notation/internal/auth"
+	"github.com/notaryproject/notation/internal/auth"
 	"github.com/notaryproject/notation/internal/cmd"
+	credentials "github.com/oras-project/oras-credentials-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -87,41 +86,27 @@ func runLogin(ctx context.Context, opts *loginOpts) error {
 	}
 	cred := opts.Credential()
 
-	// ping to validate the credential
+	credsStore, err := auth.NewCredentialsStore()
+	if err != nil {
+		return fmt.Errorf("failed to get credentials store: %v", err)
+	}
 	registry, err := getRegistryClient(ctx, &opts.SecureFlagOpts, serverAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get registry client: %v", err)
 	}
-	registryName := registry.Reference.Registry
-	if err := registry.Ping(ctx); err != nil {
-		return fmt.Errorf("failed to login to %s: failed to validate the credential: %v", registryName, err)
-	}
-
-	// store the validated credential
-	credsStore, err := notationauth.NewCredentialsStore()
-	if err != nil {
-		return fmt.Errorf("failed to get credentials store: %v", err)
-	}
-	credKey := registryName
-	if credKey == "docker.io" {
-		credKey = "https://index.docker.io/v1/"
-	}
-	if err := credsStore.Put(ctx, credKey, cred); err != nil {
+	if err := credentials.Login(ctx, credsStore, registry, cred); err != nil {
+		registryName := registry.Reference.Registry
 		if !errors.Is(err, credentials.ErrPlaintextPutDisabled) {
 			return fmt.Errorf("failed to login to %s: %v", registryName, err)
 		}
 
-		// native credentials store is not available
-		savedCred, err := credsStore.Get(ctx, credKey)
-		if err == nil && savedCred == cred {
-			// identical credential
-			fmt.Fprintf(os.Stderr, `Warning: Configuring credential helper to securely store credentials is recommended. 
-									Please refer to %s for more information.`, urlDocHowToAuthenticate)
+		// ErrPlaintextPutDisabled returned by Login() indicates that the credential is validated
+		// but is not saved because there is no native credentials store available
+		if savedCred, err := credsStore.Get(ctx, registryName); err == nil && savedCred == cred {
+			// there is an existing identical credential, ignore saving error
+			fmt.Fprintf(os.Stderr, "Warning: Configuring credential helper to securely store credentials is recommended. For more information, please refer to %s\n", urlDocHowToAuthenticate)
 		} else {
-			return fmt.Errorf(`failed to login to %s: 
-							   the credential could not be saved because a credentials store is required to securely store the password. 
-							   If you are unable to set up a credentials store, you can configure environment variables. 
-							   Please refer to %s for more information`,
+			return fmt.Errorf("failed to login to %s: the credential could not be saved because a credentials store is required to securely store the password. If you are unable to set up a credentials store, you can configure environment variables. For more information, please refer to %s",
 				registryName, urlDocHowToAuthenticate)
 		}
 	}
