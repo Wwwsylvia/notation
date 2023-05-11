@@ -7,12 +7,12 @@ require (
 	github.com/notaryproject/notation-go v1.0.0-rc.4
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc2
-	github.com/oras-project/oras-credentials-go v0.0.0-20230424070720-ba6b33c40845
+	github.com/oras-project/oras-credentials-go v0.1.1-0.20230510123758-a1eb42442c2e
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/term v0.7.0
-	oras.land/oras-go/v2 v2.0.2
+	oras.land/oras-go/v2 v2.1.1-0.20230510085343-0e20275bbbd7
 )
 
 require (
@@ -27,6 +27,6 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 )
