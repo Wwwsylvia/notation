@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/notaryproject/notation/internal/auth"
+	notationauth "github.com/notaryproject/notation/internal/auth"
 	"github.com/notaryproject/notation/internal/cmd"
 	credentials "github.com/oras-project/oras-credentials-go"
 	"github.com/spf13/cobra"
@@ -72,25 +72,40 @@ func runLogin(ctx context.Context, opts *loginOpts) error {
 	// input username and password by prompt
 	reader := bufio.NewReader(os.Stdin)
 	var err error
-	if opts.Username == "" {
-		opts.Username, err = readUsernameFromPrompt(reader)
-		if err != nil {
-			return err
-		}
-	}
 	if opts.Password == "" {
-		opts.Password, err = readPasswordFromPrompt(reader)
-		if err != nil {
-			return err
+		if opts.Username == "" {
+			opts.Username, err = readUsernameFromPrompt(reader)
+			if err != nil {
+				return err
+			}
+		}
+		if opts.Username == "" {
+			// username is empty, prompt for token
+			opts.Password, err = readPasswordFromPrompt(reader, true)
+			if err != nil {
+				return err
+			}
+			if opts.Password == "" {
+				return errors.New("token required")
+			}
+		} else {
+			// username is not empty, prompt for password
+			opts.Password, err = readPasswordFromPrompt(reader, false)
+			if err != nil {
+				return err
+			}
+			if opts.Password == "" {
+				return errors.New("password required")
+			}
 		}
 	}
 	cred := opts.Credential()
 
-	credsStore, err := auth.NewCredentialsStore()
+	credsStore, err := notationauth.NewCredentialsStore()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials store: %v", err)
 	}
-	registry, err := getRegistryClient(ctx, &opts.SecureFlagOpts, serverAddress)
+	registry, err := getRegistryLoginClient(ctx, &opts.SecureFlagOpts, serverAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get registry client: %v", err)
 	}
@@ -147,19 +162,27 @@ func readUsernameFromPrompt(reader *bufio.Reader) (string, error) {
 	return username, nil
 }
 
-func readPasswordFromPrompt(reader *bufio.Reader) (string, error) {
-	fmt.Print("Password: ")
+func readPasswordFromPrompt(reader *bufio.Reader, isToken bool) (string, error) {
+	var passwordType string
+	if isToken {
+		passwordType = "token"
+		fmt.Print("Token: ")
+	} else {
+		passwordType = "password"
+		fmt.Print("Password: ")
+	}
+
 	if term.IsTerminal(int(os.Stdin.Fd())) {
 		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return "", fmt.Errorf("error reading password: %w", err)
+			return "", fmt.Errorf("error reading %s: %w", passwordType, err)
 		}
 		fmt.Println()
 		return string(bytePassword), nil
 	} else {
 		password, err := readLine(reader)
 		if err != nil {
-			return "", fmt.Errorf("error reading password: %w", err)
+			return "", fmt.Errorf("error reading %s: %w", passwordType, err)
 		}
 		fmt.Println()
 		return password, nil
