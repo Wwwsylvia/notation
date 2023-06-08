@@ -28,8 +28,8 @@ func NewCredentialsStore() (credentials.Store, error) {
 
 	if !notationStore.IsAuthConfigured() && !dockerStore.IsAuthConfigured() {
 		// if both notation config and docker config do not have auth
-		// configuration, fallback to the platform-default credentials helper
-		// (if available)
+		// configuration, fallback to the platform-default docker credentials
+		// helper (if available)
 		osDefaultStore, ok := credentials.NewDefaultNativeStore()
 		if ok {
 			return credentials.NewStoreWithFallbacks(notationStore, dockerStore, osDefaultStore), nil

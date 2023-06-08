@@ -1,8 +1,8 @@
 github.com/Azure/go-ntlmssp v0.0.0-20220621081337-cb9428e4ac1e/go.mod h1:chxPXzSsl7ZWRAuOIE23GDNzjWuZquvFlgA8xmpunjU=
 github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 h1:mFRzDkZVAjdal+s7s0MwaRv9igoPqLRdzOLzw/8Xvq8=
 github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358/go.mod h1:chxPXzSsl7ZWRAuOIE23GDNzjWuZquvFlgA8xmpunjU=
-github.com/Wwwsylvia/oras-credentials-go v0.0.0-20230608042921-c9e5bc5c8687 h1:qbJtNBzSu1FRyJMbadOeHXjFdynmd+0sLXue1g+3Lf4=
-github.com/Wwwsylvia/oras-credentials-go v0.0.0-20230608042921-c9e5bc5c8687/go.mod h1:188MBZBQQbrLlrOZY37hc8Z4Xjl+wP3PaIJkJuk94JM=
+github.com/Wwwsylvia/oras-credentials-go v0.0.0-20230608111201-3b5b6c696ab4 h1:Ujs4KNYI9tlrWS191RWbeqijGOi6xqH1ZD3nMsOKBY8=
+github.com/Wwwsylvia/oras-credentials-go v0.0.0-20230608111201-3b5b6c696ab4/go.mod h1:188MBZBQQbrLlrOZY37hc8Z4Xjl+wP3PaIJkJuk94JM=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
