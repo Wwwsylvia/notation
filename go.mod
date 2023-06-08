@@ -30,3 +30,5 @@ require (
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 )
+
+replace github.com/oras-project/oras-credentials-go => github.com/Wwwsylvia/oras-credentials-go v0.0.0-20230608025622-04398090dd23

@@ -16,14 +16,21 @@ func NewCredentialsStore() (credentials.Store, error) {
 	}
 
 	opts := credentials.StoreOptions{AllowPlaintextPut: false}
-	primaryStore, err := credentials.NewStore(configPath, opts)
+	notationStore, err := credentials.NewStore(configPath, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential store from config file: %w", err)
 	}
 
-	fallbackStore, err := credentials.NewStoreFromDocker(opts)
+	dockerStore, err := credentials.NewStoreFromDocker(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential store from docker config file: %w", err)
 	}
-	return credentials.NewStoreWithFallbacks(primaryStore, fallbackStore), nil
+
+	if !notationStore.IsAuthConfigured() && !dockerStore.IsAuthConfigured() {
+		osDefaultStore, ok := credentials.NewDefaultNativeStore()
+		if ok {
+			return credentials.NewStoreWithFallbacks(notationStore, dockerStore, osDefaultStore), nil
+		}
+	}
+	return credentials.NewStoreWithFallbacks(notationStore, dockerStore), nil
 }
